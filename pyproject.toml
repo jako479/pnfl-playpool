@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pnfl-playpool"
+version = "0.1.0"
+description = "Build the PNFL play pool from Front Page Sports Football Pro '98 play files."
+authors = [{ name = "Brian J" }]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["fbpro98-play>=0.1.0"]
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.format]
+quote-style = "double"
