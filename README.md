@@ -38,5 +38,7 @@ pytest
 Current tests cover:
 
 - a snapshot of the checked-in PNFL play subset
-- heuristic classification behavior
+- all offensive and defensive directory categories in the checked-in corpus
+- all current derived play types: `Screen`, `QB draw`, `R&S`, `3-4`, and `4-3`
+- category-count totals against the classified play lists
 - invalid `.ply` skip/warning behavior
