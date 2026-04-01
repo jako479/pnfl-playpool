@@ -152,7 +152,7 @@ def test_special_teams_fixture_shape(play_pool: PlayPool) -> None:
     assert play.name == "AF-KO"
     assert play.pool_category == ""
     assert play.play_type == ""
-    assert play.special_flag == 0x02
+    assert play.special_category == 0x02
 
 
 def test_known_invalid_fixture_is_skipped_with_warning(caplog: pytest.LogCaptureFixture) -> None:

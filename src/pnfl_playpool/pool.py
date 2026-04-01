@@ -30,8 +30,8 @@ class PlayRecord:
         return self.play_file.play_category
 
     @property
-    def special_flag(self) -> int:
-        return self.play_file.special_flag
+    def special_category(self) -> int:
+        return self.play_file.special_category
 
     @property
     def user_category(self) -> int:
@@ -48,7 +48,7 @@ class PlayRecord:
             "pool_category": self.pool_category,
             "play_type": self.play_type,
             "play_category": self.play_category,
-            "special_flag": self.special_flag,
+            "special_category": self.special_category,
             "user_category": self.user_category,
         }
 
