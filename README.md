@@ -2,9 +2,11 @@
 `pnfl-playpool` scans a PNFL play tree and classifies approved plays.
 It uses `fbpro98-play` for basic `.ply` metadata, then applies the current
 PNFL-specific folder/name heuristics to produce:
-- offensive, defensive, and special-teams play lists
+- typed play records: `OffensivePlayRecord`, `DefensivePlayRecord`, `SpecialTeamsPlayRecord`
+- offensive attributes: screen, rollout, QB draw, pass type
+- defensive attributes: personnel grouping (3-4, 4-3, R&S)
 - offensive and defensive category counts
-- play types such as `Screen`, `QB draw`, `R&S`, `3-4`, and `4-3`
+- O(1) play lookup by name
 ## Setup
 ```bash
 python -m venv .venv
@@ -14,22 +16,17 @@ pip install -e ".[dev]"
 ```
 ## Usage
 ```python
-from pnfl_playpool import PlayPool
+from pnfl_playpool import PlayPool, OffensivePlayRecord
 
 pool = PlayPool.from_directory(r"E:\SIERRA\FbPro98\PNFL")
 print(len(pool.offensive_plays))
 print(len(pool.defensive_plays))
-print(len(pool.special_teams_plays))
+
+play = pool.find_by_name("AF3ArshZ")
+if isinstance(play, OffensivePlayRecord):
+    print(play.pool_category, play.screen, play.qb_draw)
 ```
-Each play is a `PlayRecord` containing a `PlayFile` (composition) plus PNFL
-classification fields (`pool_category`, `play_type`).
 ## Testing
 ```bash
 pytest
 ```
-Current tests cover:
-- a snapshot of the checked-in PNFL play subset
-- all offensive and defensive pool categories in the checked-in corpus
-- all current derived play types: `Screen`, `QB draw`, `R&S`, `3-4`, and `4-3`
-- category-count totals against the classified play lists
-- invalid `.ply` skip/warning behavior
