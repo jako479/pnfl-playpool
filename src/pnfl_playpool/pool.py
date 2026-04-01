@@ -74,6 +74,14 @@ class OffensivePlayRecord(PlayRecord):
     qb_draw: bool = False
     pass_type: PassType | None = None
 
+    @property
+    def is_run(self) -> bool:
+        return self.pool_category in RUN_CATEGORIES
+
+    @property
+    def is_pass(self) -> bool:
+        return self.pool_category in PASS_CATEGORIES
+
     def to_dict(self, *, relative_to: Path | None = None) -> dict[str, object]:
         result = self._base_dict(relative_to=relative_to)
         result["screen"] = self.screen
