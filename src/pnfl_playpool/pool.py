@@ -1,34 +1,51 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
+import logging
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
-from fbpro98_play import InvalidPlyError, PlyFile
+from fbpro98_play import InvalidPlayFileError, PlayFile
 
+
+logger = logging.getLogger(__name__)
 
 RUN_CATEGORIES = {"GLR", "RL", "RM", "RR"}
 
 
 @dataclass(frozen=True, slots=True)
-class Play:
+class PlayRecord:
     name: str
-    file_path: str
-    directory_category: str
+    play_file: PlayFile
+    pool_category: str
     play_type: str
-    play_category: int
-    special_flag: int
-    user_category: int
+
+    @property
+    def file_path(self) -> Path:
+        return self.play_file.file_path
+
+    @property
+    def play_category(self) -> int:
+        return self.play_file.play_category
+
+    @property
+    def special_flag(self) -> int:
+        return self.play_file.special_flag
+
+    @property
+    def user_category(self) -> int:
+        return self.play_file.user_category
 
     def to_dict(self, *, relative_to: Path | None = None) -> dict[str, str | int]:
-        file_path = Path(self.file_path)
+        file_path = self.file_path
         if relative_to is not None:
             file_path = file_path.relative_to(relative_to)
 
         return {
             "name": self.name,
             "file_path": file_path.as_posix(),
-            "directory_category": self.directory_category,
+            "pool_category": self.pool_category,
             "play_type": self.play_type,
             "play_category": self.play_category,
             "special_flag": self.special_flag,
@@ -37,23 +54,27 @@ class Play:
 
 
 class PlayPool:
-    def __init__(self, root_dir: str | Path) -> None:
-        self.root_dir = Path(root_dir)
+    def __init__(self, root_dir: Path) -> None:
+        self.root_dir = root_dir
         self.offensive_categories: dict[str, dict[int, int]] = {}
         self.defensive_categories: dict[str, dict[int, int]] = {}
-        self.offensive_plays: list[Play] = []
-        self.defensive_plays: list[Play] = []
-        self.special_teams_plays: list[Play] = []
+        self.offensive_plays: list[PlayRecord] = []
+        self.defensive_plays: list[PlayRecord] = []
+        self.special_teams_plays: list[PlayRecord] = []
 
-        print(f"Processing .ply files in '{self.root_dir}'")
-        for file_path in self.root_dir.glob("**/*.ply"):
-            self._process_play_file(file_path)
+    @classmethod
+    def from_directory(cls, root_dir: str | Path) -> PlayPool:
+        pool = cls(Path(root_dir))
+        logger.info("Processing .ply files in '%s'", pool.root_dir)
+        for file_path in pool.root_dir.glob("**/*.ply"):
+            pool._process_play_file(file_path)
+        return pool
 
     def _process_play_file(self, file_path: Path) -> None:
         try:
-            play_file = PlyFile(file_path)
-        except InvalidPlyError as exc:
-            print(f"Warning: skipping invalid play file: {exc}")
+            play_file = PlayFile(file_path)
+        except InvalidPlayFileError as exc:
+            logger.warning("Skipping invalid play file: %s", exc)
             return
 
         play_name = file_path.stem.upper()
@@ -83,33 +104,30 @@ class PlayPool:
         play_name: str,
         parent_dir: str,
         grandparent_dir: str,
-        play_file: PlyFile,
+        play_file: PlayFile,
     ) -> None:
         if parent_dir == "Screens":
-            directory_category = grandparent_dir
+            pool_category = grandparent_dir
             play_type = "Screen"
         elif parent_dir in RUN_CATEGORIES and (
             play_name[1] == "1" or play_name[2] == "1"
         ):
-            directory_category = parent_dir
+            pool_category = parent_dir
             play_type = "QB draw"
         else:
-            directory_category = parent_dir
+            pool_category = parent_dir
             play_type = ""
 
-        play = Play(
+        play = PlayRecord(
             name=play_name,
-            file_path=str(play_file.file_path),
-            directory_category=directory_category,
+            play_file=play_file,
+            pool_category=pool_category,
             play_type=play_type,
-            play_category=play_file.play_category,
-            special_flag=play_file.special_flag,
-            user_category=play_file.user_category,
         )
         self.offensive_plays.append(play)
         self._increment_user_category_count(
             self.offensive_categories,
-            directory_category,
+            pool_category,
             play_file.user_category,
         )
 
@@ -118,57 +136,51 @@ class PlayPool:
         play_name: str,
         parent_dir: str,
         grandparent_dir: str,
-        play_file: PlyFile,
+        play_file: PlayFile,
     ) -> None:
         if grandparent_dir == "R&SDefs":
-            directory_category = parent_dir
+            pool_category = parent_dir
             play_type = "R&S"
         elif parent_dir.startswith("34") or parent_dir.startswith("43"):
-            directory_category = parent_dir[2:]
+            pool_category = parent_dir[2:]
             play_type = "3-4" if parent_dir.startswith("34") else "4-3"
         else:
-            directory_category = parent_dir
+            pool_category = parent_dir
             play_type = ""
 
-        play = Play(
+        play = PlayRecord(
             name=play_name,
-            file_path=str(play_file.file_path),
-            directory_category=directory_category,
+            play_file=play_file,
+            pool_category=pool_category,
             play_type=play_type,
-            play_category=play_file.play_category,
-            special_flag=play_file.special_flag,
-            user_category=play_file.user_category,
         )
         self.defensive_plays.append(play)
         self._increment_user_category_count(
             self.defensive_categories,
-            directory_category,
+            pool_category,
             play_file.user_category,
         )
 
     def _process_special_teams_play(
         self,
         play_name: str,
-        play_file: PlyFile,
+        play_file: PlayFile,
     ) -> None:
-        play = Play(
+        play = PlayRecord(
             name=play_name,
-            file_path=str(play_file.file_path),
-            directory_category="",
+            play_file=play_file,
+            pool_category="",
             play_type="",
-            play_category=play_file.play_category,
-            special_flag=play_file.special_flag,
-            user_category=play_file.user_category,
         )
         self.special_teams_plays.append(play)
 
     @staticmethod
     def _increment_user_category_count(
         categories: dict[str, dict[int, int]],
-        directory_category: str,
+        pool_category: str,
         user_category: int,
     ) -> None:
-        category_counts = categories.setdefault(directory_category, {})
+        category_counts = categories.setdefault(pool_category, {})
         category_counts[user_category] = category_counts.get(user_category, 0) + 1
 
     def to_dict(self, *, relative_to: str | Path | None = None) -> dict[str, object]:
@@ -177,12 +189,12 @@ class PlayPool:
             "offensive_plays": self._serialize_plays(
                 self.offensive_plays,
                 relative_to=base_path,
-                sort_key=lambda play: (play.directory_category, play.name),
+                sort_key=lambda play: (play.pool_category, play.name),
             ),
             "defensive_plays": self._serialize_plays(
                 self.defensive_plays,
                 relative_to=base_path,
-                sort_key=lambda play: (play.directory_category, play.name),
+                sort_key=lambda play: (play.pool_category, play.name),
             ),
             "special_teams_plays": self._serialize_plays(
                 self.special_teams_plays,
@@ -198,23 +210,23 @@ class PlayPool:
         categories: dict[str, dict[int, int]],
     ) -> list[dict[str, int | str]]:
         rows: list[dict[str, int | str]] = []
-        for directory_category in sorted(categories):
-            for user_category in sorted(categories[directory_category]):
+        for pool_category in sorted(categories):
+            for user_category in sorted(categories[pool_category]):
                 rows.append(
                     {
-                        "directory_category": directory_category,
+                        "pool_category": pool_category,
                         "user_category": user_category,
-                        "count": categories[directory_category][user_category],
+                        "count": categories[pool_category][user_category],
                     }
                 )
         return rows
 
     @staticmethod
     def _serialize_plays(
-        plays: Iterable[Play],
+        plays: Iterable[PlayRecord],
         *,
         relative_to: Path | None,
-        sort_key: object,
+        sort_key: Callable[[PlayRecord], Any],
     ) -> list[dict[str, str | int]]:
         return [
             play.to_dict(relative_to=relative_to)
@@ -223,6 +235,6 @@ class PlayPool:
 
 
 __all__ = [
-    "Play",
+    "PlayRecord",
     "PlayPool",
 ]

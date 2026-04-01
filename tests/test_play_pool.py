@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 
 import pytest
 
-from pnfl_playpool import PlayPool
+from pnfl_playpool import PlayPool, PlayRecord
 
 
 TESTS_DIR = Path(__file__).resolve().parent
@@ -80,17 +81,17 @@ REPRESENTATIVE_PLAYS = [
 
 @pytest.fixture(scope="module")
 def play_pool() -> PlayPool:
-    return PlayPool(FIXTURE_ROOT)
+    return PlayPool.from_directory(FIXTURE_ROOT)
 
 
-def play_by_relative_path(play_pool: PlayPool, relative_path: str) -> object:
+def play_by_relative_path(play_pool: PlayPool, relative_path: str) -> PlayRecord:
     relative_posix = Path(relative_path).as_posix()
     for play in (
         play_pool.offensive_plays
         + play_pool.defensive_plays
         + play_pool.special_teams_plays
     ):
-        if Path(play.file_path).relative_to(FIXTURE_ROOT).as_posix() == relative_posix:
+        if play.file_path.relative_to(FIXTURE_ROOT).as_posix() == relative_posix:
             return play
     raise AssertionError(f"Play not found for fixture path: {relative_path}")
 
@@ -107,7 +108,7 @@ def test_play_pool_exposes_expected_category_and_type_sets(play_pool: PlayPool) 
     assert set(play_pool.defensive_categories) == EXPECTED_DEFENSIVE_CATEGORIES
     assert {play.play_type for play in play_pool.offensive_plays} == EXPECTED_OFFENSIVE_TYPES
     assert {play.play_type for play in play_pool.defensive_plays} == EXPECTED_DEFENSIVE_TYPES
-    assert {play.directory_category for play in play_pool.special_teams_plays} == {""}
+    assert {play.pool_category for play in play_pool.special_teams_plays} == {""}
     assert {play.play_type for play in play_pool.special_teams_plays} == {""}
 
 
@@ -141,7 +142,7 @@ def test_real_fixture_examples_classify_as_expected(
     play = play_by_relative_path(play_pool, relative_path)
 
     assert play.name == expected_name
-    assert play.directory_category == expected_category
+    assert play.pool_category == expected_category
     assert play.play_type == expected_play_type
 
 
@@ -149,19 +150,19 @@ def test_special_teams_fixture_shape(play_pool: PlayPool) -> None:
     play = play_by_relative_path(play_pool, "Special/AF-KO.ply")
 
     assert play.name == "AF-KO"
-    assert play.directory_category == ""
+    assert play.pool_category == ""
     assert play.play_type == ""
     assert play.special_flag == 0x02
 
 
-def test_known_invalid_fixture_is_skipped_with_warning(capsys) -> None:
-    play_pool = PlayPool(FIXTURE_ROOT)
-    captured = capsys.readouterr()
+def test_known_invalid_fixture_is_skipped_with_warning(caplog: pytest.LogCaptureFixture) -> None:
+    with caplog.at_level(logging.WARNING, logger="pnfl_playpool.pool"):
+        play_pool = PlayPool.from_directory(FIXTURE_ROOT)
 
     assert INVALID_FIXTURE.is_file()
-    assert "Warning: skipping invalid play file:" in captured.out
-    assert "PS7Xmids.ply" in captured.out
+    assert "Skipping invalid play file:" in caplog.text
+    assert "PS7Xmids.ply" in caplog.text
     assert all(
-        Path(play.file_path).name != INVALID_FIXTURE.name
+        play.file_path.name != INVALID_FIXTURE.name
         for play in play_pool.offensive_plays
     )
