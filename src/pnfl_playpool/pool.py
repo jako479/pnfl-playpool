@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from enum import Enum
@@ -14,6 +15,13 @@ logger = logging.getLogger(__name__)
 
 RUN_CATEGORIES = {"GLR", "RL", "RM", "RR"}
 PASS_CATEGORIES = {"GLP", "PLR", "PML", "PMM", "PMR", "PRD", "PSL", "PSM", "PSR"}
+
+TIMED_SUFFIXES = {"T", "T1", "T2", "TR", "RT", "Ty", "T01", "T01R", "T02", "Top"}
+TIMED_EXCLUSIONS = {"OUT", "SLT1", "FLT1", "OUT1"}
+TIMED_LOB_PATTERN = re.compile(r"lob.$", re.I)
+
+ROLLOUT_SUFFIXES = {"R", "RT", "TR", "wagL", "rolL"}
+ROLLOUT_EXCLUSIONS = {"CR", "WR", "scrR", "trpR", "nRT", "NRT"}
 
 
 class PassType(Enum):
@@ -108,6 +116,22 @@ class SpecialTeamsPlayRecord(PlayRecord):
     pass
 
 
+def _is_timed(play_name: str) -> bool:
+    for excl in TIMED_EXCLUSIONS:
+        if play_name.endswith(excl):
+            return False
+    if TIMED_LOB_PATTERN.search(play_name):
+        return True
+    return any(play_name.endswith(sfx) for sfx in TIMED_SUFFIXES)
+
+
+def _is_rollout(play_name: str) -> bool:
+    for excl in ROLLOUT_EXCLUSIONS:
+        if play_name.endswith(excl):
+            return False
+    return any(play_name.endswith(sfx) for sfx in ROLLOUT_SUFFIXES)
+
+
 class PlayPool:
     def __init__(self, root_dir: Path) -> None:
         self.root_dir = root_dir
@@ -130,7 +154,7 @@ class PlayPool:
         return self._plays_by_name.get(name.upper())
 
     def _register_play(self, play: PlayRecord) -> None:
-        self._plays_by_name[play.name] = play
+        self._plays_by_name[play.name.upper()] = play
 
     def _process_play_file(self, file_path: Path) -> None:
         try:
@@ -139,7 +163,7 @@ class PlayPool:
             logger.warning("Skipping invalid play file: %s", exc)
             return
 
-        play_name = file_path.stem.upper()
+        play_name = file_path.stem
         parent_dir = file_path.parent.name
         grandparent_dir = file_path.parent.parent.name
         file_path_text = str(file_path)
@@ -170,10 +194,13 @@ class PlayPool:
     ) -> None:
         screen = parent_dir == "Screens"
         pool_category = grandparent_dir if screen else parent_dir
+        is_pass = pool_category in PASS_CATEGORIES
         qb_draw = (
             pool_category in RUN_CATEGORIES
             and (play_name[1] == "1" or play_name[2] == "1")
         )
+        rollout = is_pass and _is_rollout(play_name)
+        pass_type = PassType.TIMED if is_pass and _is_timed(play_name) else None
 
         play = OffensivePlayRecord(
             name=play_name,
@@ -181,6 +208,8 @@ class PlayPool:
             pool_category=pool_category,
             screen=screen,
             qb_draw=qb_draw,
+            rollout=rollout,
+            pass_type=pass_type,
         )
         self.offensive_plays.append(play)
         self._register_play(play)

@@ -56,40 +56,40 @@ EXPECTED_PERSONNEL_GROUPINGS = {
 }
 
 REPRESENTATIVE_OFFENSIVE_PLAYS = [
-    ("Offense/GLP/AFGZoutX.ply", "AFGZOUTX", "GLP", False, False),
-    ("Offense/GLR/AF21goal.ply", "AF21GOAL", "GLR", False, False),
-    ("Offense/PLR/AF9KflyA.ply", "AF9KFLYA", "PLR", False, False),
-    ("Offense/PML/AF4AoutX.ply", "AF4AOUTX", "PML", False, False),
-    ("Offense/PMM/Screens/AF5Xscrn.ply", "AF5XSCRN", "PMM", True, False),
+    ("Offense/GLP/AFGZoutX.ply", "AFGZoutX", "GLP", False, False),
+    ("Offense/GLR/AF21goal.ply", "AF21goal", "GLR", False, False),
+    ("Offense/PLR/AF9KflyA.ply", "AF9KflyA", "PLR", False, False),
+    ("Offense/PML/AF4AoutX.ply", "AF4AoutX", "PML", False, False),
+    ("Offense/PMM/Screens/AF5Xscrn.ply", "AF5Xscrn", "PMM", True, False),
     ("Offense/PMR/AF6A02T.ply", "AF6A02T", "PMR", False, False),
-    ("Offense/PMR/Screens/AF6Zscrn.ply", "AF6ZSCRN", "PMR", True, False),
-    ("Offense/PRD/AF0AouSX.ply", "AF0AOUSX", "PRD", False, False),
-    ("Offense/PSL/AF1Ain2T.ply", "AF1AIN2T", "PSL", False, False),
-    ("Offense/PSL/Screens/SF1Iscrn.ply", "SF1ISCRN", "PSL", True, False),
-    ("Offense/PSM/AF2AshtZ.ply", "AF2ASHTZ", "PSM", False, False),
-    ("Offense/PSR/AF3ArshZ.ply", "AF3ARSHZ", "PSR", False, False),
+    ("Offense/PMR/Screens/AF6Zscrn.ply", "AF6Zscrn", "PMR", True, False),
+    ("Offense/PRD/AF0AouSX.ply", "AF0AouSX", "PRD", False, False),
+    ("Offense/PSL/AF1Ain2T.ply", "AF1Ain2T", "PSL", False, False),
+    ("Offense/PSL/Screens/SF1Iscrn.ply", "SF1Iscrn", "PSL", True, False),
+    ("Offense/PSM/AF2AshtZ.ply", "AF2AshtZ", "PSM", False, False),
+    ("Offense/PSR/AF3ArshZ.ply", "AF3ArshZ", "PSR", False, False),
     ("Offense/GLR/WR10GR01.ply", "WR10GR01", "GLR", False, True),
-    ("Offense/RL/A21Div20.ply", "A21DIV20", "RL", False, True),
-    ("Offense/RM/AF21rm12.ply", "AF21RM12", "RM", False, False),
-    ("Offense/RM/PS10qdrw.ply", "PS10QDRW", "RM", False, True),
-    ("Offense/RR/AF21rr12.ply", "AF21RR12", "RR", False, False),
+    ("Offense/RL/A21Div20.ply", "A21Div20", "RL", False, True),
+    ("Offense/RM/AF21rm12.ply", "AF21rm12", "RM", False, False),
+    ("Offense/RM/PS10qdrw.ply", "PS10qdrw", "RM", False, True),
+    ("Offense/RR/AF21rr12.ply", "AF21rr12", "RR", False, False),
     ("Offense/RR/AZ10RRDW.PLY", "AZ10RRDW", "RR", False, True),
 ]
 
 REPRESENTATIVE_DEFENSIVE_PLAYS = [
-    ("Defense/GLpass/AF32gp02.ply", "AF32GP02", "GLpass", None),
-    ("Defense/GLrun/AT42glrM.ply", "AT42GLRM", "GLrun", None),
+    ("Defense/GLpass/AF32gp02.ply", "AF32gp02", "GLpass", None),
+    ("Defense/GLrun/AT42glrM.ply", "AT42glrM", "GLrun", None),
     ("Defense/R&SDefs/PassDazzle/AT2PDBTS.ply", "AT2PDBTS", "PassDazzle", DefensivePersonnel.RUN_AND_SHOOT),
     ("Defense/R&SDefs/PassLong/AF22PL01.ply", "AF22PL01", "PassLong", DefensivePersonnel.RUN_AND_SHOOT),
-    ("Defense/R&SDefs/PassMedium/AF22pmDT.ply", "AF22PMDT", "PassMedium", DefensivePersonnel.RUN_AND_SHOOT),
-    ("Defense/PassShort/3R04ps01.ply", "3R04PS01", "PassShort", None),
+    ("Defense/R&SDefs/PassMedium/AF22pmDT.ply", "AF22pmDT", "PassMedium", DefensivePersonnel.RUN_AND_SHOOT),
+    ("Defense/PassShort/3R04ps01.ply", "3R04ps01", "PassShort", None),
     ("Defense/RunDazzle/ATF4RRD1.ply", "ATF4RRD1", "RunDazzle", None),
-    ("Defense/34RunLeft/AF31rl3H.ply", "AF31RL3H", "RunLeft", DefensivePersonnel.THREE_FOUR),
-    ("Defense/34RunMiddle/AF31rmBG.ply", "AF31RMBG", "RunMiddle", DefensivePersonnel.THREE_FOUR),
-    ("Defense/34RunRight/AF31rrBG.ply", "AF31RRBG", "RunRight", DefensivePersonnel.THREE_FOUR),
-    ("Defense/43RunLeft/AF41rl2p.ply", "AF41RL2P", "RunLeft", DefensivePersonnel.FOUR_THREE),
-    ("Defense/43RunMiddle/AF41rmBE.ply", "AF41RMBE", "RunMiddle", DefensivePersonnel.FOUR_THREE),
-    ("Defense/43RunRight/AF41rr25.ply", "AF41RR25", "RunRight", DefensivePersonnel.FOUR_THREE),
+    ("Defense/34RunLeft/AF31rl3H.ply", "AF31rl3H", "RunLeft", DefensivePersonnel.THREE_FOUR),
+    ("Defense/34RunMiddle/AF31rmBG.ply", "AF31rmBG", "RunMiddle", DefensivePersonnel.THREE_FOUR),
+    ("Defense/34RunRight/AF31rrBG.ply", "AF31rrBG", "RunRight", DefensivePersonnel.THREE_FOUR),
+    ("Defense/43RunLeft/AF41rl2p.ply", "AF41rl2p", "RunLeft", DefensivePersonnel.FOUR_THREE),
+    ("Defense/43RunMiddle/AF41rmBE.ply", "AF41rmBE", "RunMiddle", DefensivePersonnel.FOUR_THREE),
+    ("Defense/43RunRight/AF41rr25.ply", "AF41rr25", "RunRight", DefensivePersonnel.FOUR_THREE),
 ]
 
 
@@ -135,13 +135,28 @@ def test_special_teams_plays_are_special_teams_records(play_pool: PlayPool) -> N
     assert all(isinstance(play, SpecialTeamsPlayRecord) for play in play_pool.special_teams_plays)
 
 
-def test_offensive_plays_have_expected_attribute_sets(play_pool: PlayPool) -> None:
-    assert {play.screen for play in play_pool.offensive_plays} == {True, False}
-    assert {play.qb_draw for play in play_pool.offensive_plays} == {True, False}
+def test_play_counts(play_pool: PlayPool) -> None:
+    assert len(play_pool.offensive_plays) == 2461
+    assert len(play_pool.defensive_plays) == 2186
+    assert len(play_pool.special_teams_plays) == 308
 
 
-def test_defensive_plays_have_expected_personnel_groupings(play_pool: PlayPool) -> None:
-    assert {play.personnel_grouping for play in play_pool.defensive_plays} == EXPECTED_PERSONNEL_GROUPINGS
+def test_offensive_play_type_counts(play_pool: PlayPool) -> None:
+    plays = play_pool.offensive_plays
+    assert sum(1 for p in plays if p.is_run) == 660
+    assert sum(1 for p in plays if p.is_pass) == 1801
+    assert sum(1 for p in plays if p.qb_draw) == 52
+    assert sum(1 for p in plays if p.screen) == 57
+    assert sum(1 for p in plays if p.pass_type is not None) == 388
+    assert sum(1 for p in plays if p.rollout) == 189
+
+
+def test_defensive_play_personnel_counts(play_pool: PlayPool) -> None:
+    plays = play_pool.defensive_plays
+    assert sum(1 for p in plays if p.personnel_grouping == DefensivePersonnel.THREE_FOUR) == 697
+    assert sum(1 for p in plays if p.personnel_grouping == DefensivePersonnel.FOUR_THREE) == 184
+    assert sum(1 for p in plays if p.personnel_grouping == DefensivePersonnel.RUN_AND_SHOOT) == 219
+    assert sum(1 for p in plays if p.personnel_grouping is None) == 1086
 
 
 def test_category_count_totals_match_play_counts(play_pool: PlayPool) -> None:
@@ -212,7 +227,7 @@ def test_special_teams_fixture_shape(play_pool: PlayPool) -> None:
 def test_find_by_name(play_pool: PlayPool) -> None:
     play = play_pool.find_by_name("AFGZOUTX")
     assert play is not None
-    assert play.name == "AFGZOUTX"
+    assert play.name == "AFGZoutX"
     assert isinstance(play, OffensivePlayRecord)
 
     play = play_pool.find_by_name("afgzoutx")
