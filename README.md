@@ -1,5 +1,5 @@
 # pnfl-playpool
-`pnfl-playpool` scans a PNFL play tree and classifies approved plays.
+Library that scans a PNFL play tree and classifies approved plays.
 It uses `fbpro98-play` for basic `.ply` metadata, then applies the current
 PNFL-specific folder/name heuristics to produce:
 - typed play records: `OffensivePlayRecord`, `DefensivePlayRecord`, `SpecialTeamsPlayRecord`
@@ -7,6 +7,49 @@ PNFL-specific folder/name heuristics to produce:
 - defensive attributes: personnel grouping (3-4, 4-3, R&S)
 - offensive and defensive category counts
 - O(1) play lookup by name
+
+## Expected Directory Structure
+
+The play pool root must follow the PNFL play tree layout:
+
+```
+PNFL/
+├── Offense/
+│   ├── GLP/
+│   ├── GLR/
+│   ├── PLR/
+│   ├── PML/
+│   ├── PMM/
+│   ├── PMR/
+│   ├── PRD/
+│   ├── PSL/
+│   ├── PSM/
+│   ├── PSR/
+│   ├── RL/
+│   ├── RM/
+│   └── RR/
+├── Defense/
+│   ├── 34RunLeft/
+│   ├── 34RunMiddle/
+│   ├── 34RunRight/
+│   ├── 43RunLeft/
+│   ├── 43RunMiddle/
+│   ├── 43RunRight/
+│   ├── GLpass/
+│   ├── GLrun/
+│   ├── PassDazzle/
+│   ├── PassLong/
+│   ├── PassMedium/
+│   ├── PassShort/
+│   ├── R&SDefs/
+│   ├── RunDazzle/
+│   └── RunRight/
+└── Special/
+```
+
+Play classification is derived from directory names. Plays in unrecognized
+categories are logged and skipped.
+
 ## Setup
 ```bash
 python -m venv .venv

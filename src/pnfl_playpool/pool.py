@@ -39,7 +39,6 @@ class DefensivePersonnel(Enum):
 class PlayRecord:
     name: str
     play_file: PlayFile
-    pool_category: str
 
     @property
     def file_path(self) -> Path:
@@ -65,7 +64,6 @@ class PlayRecord:
         return {
             "name": self.name,
             "file_path": file_path.as_posix(),
-            "pool_category": self.pool_category,
             "play_category": self.play_category,
             "special_category": self.special_category,
             "user_category": self.user_category,
@@ -77,6 +75,7 @@ class PlayRecord:
 
 @dataclass(frozen=True)
 class OffensivePlayRecord(PlayRecord):
+    pool_category: str
     screen: bool = False
     rollout: bool = False
     qb_draw: bool = False
@@ -92,6 +91,7 @@ class OffensivePlayRecord(PlayRecord):
 
     def to_dict(self, *, relative_to: Path | None = None) -> dict[str, object]:
         result = self._base_dict(relative_to=relative_to)
+        result["pool_category"] = self.pool_category
         result["screen"] = self.screen
         result["rollout"] = self.rollout
         result["qb_draw"] = self.qb_draw
@@ -101,10 +101,12 @@ class OffensivePlayRecord(PlayRecord):
 
 @dataclass(frozen=True)
 class DefensivePlayRecord(PlayRecord):
+    pool_category: str
     personnel_grouping: DefensivePersonnel | None = None
 
     def to_dict(self, *, relative_to: Path | None = None) -> dict[str, object]:
         result = self._base_dict(relative_to=relative_to)
+        result["pool_category"] = self.pool_category
         result["personnel_grouping"] = (
             self.personnel_grouping.value if self.personnel_grouping else None
         )
@@ -113,7 +115,8 @@ class DefensivePlayRecord(PlayRecord):
 
 @dataclass(frozen=True)
 class SpecialTeamsPlayRecord(PlayRecord):
-    pass
+    def to_dict(self, *, relative_to: Path | None = None) -> dict[str, object]:
+        return self._base_dict(relative_to=relative_to)
 
 
 def _is_timed(play_name: str) -> bool:
@@ -158,7 +161,7 @@ class PlayPool:
 
     def _process_play_file(self, file_path: Path) -> None:
         try:
-            play_file = PlayFile(file_path)
+            play_file = PlayFile.from_file(file_path)
         except InvalidPlayFileError as exc:
             logger.warning("Skipping invalid play file: %s", exc)
             return
@@ -168,6 +171,7 @@ class PlayPool:
         grandparent_dir = file_path.parent.parent.name
         file_path_text = str(file_path)
 
+        # TODO: Validate play belongs in correct pool directory; log warning when misplaced.
         if "Offense" in file_path_text:
             self._process_offensive_play(
                 play_name,
@@ -192,6 +196,10 @@ class PlayPool:
         grandparent_dir: str,
         play_file: PlayFile,
     ) -> None:
+        if play_file.category_name is None:
+            logger.warning("Unrecognized category for offensive play '%s', skipping", play_name)
+            return
+
         screen = parent_dir == "Screens"
         pool_category = grandparent_dir if screen else parent_dir
         is_pass = pool_category in PASS_CATEGORIES
@@ -226,6 +234,10 @@ class PlayPool:
         grandparent_dir: str,
         play_file: PlayFile,
     ) -> None:
+        if play_file.category_name is None:
+            logger.warning("Unrecognized category for defensive play '%s', skipping", play_name)
+            return
+
         personnel_grouping: DefensivePersonnel | None = None
         if grandparent_dir == "R&SDefs":
             pool_category = parent_dir
@@ -261,7 +273,6 @@ class PlayPool:
         play = SpecialTeamsPlayRecord(
             name=play_name,
             play_file=play_file,
-            pool_category="",
         )
         self.special_teams_plays.append(play)
         self._register_play(play)
@@ -324,14 +335,3 @@ class PlayPool:
             play.to_dict(relative_to=relative_to)
             for play in sorted(plays, key=sort_key)
         ]
-
-
-__all__ = [
-    "DefensivePersonnel",
-    "DefensivePlayRecord",
-    "OffensivePlayRecord",
-    "PassType",
-    "PlayPool",
-    "PlayRecord",
-    "SpecialTeamsPlayRecord",
-]

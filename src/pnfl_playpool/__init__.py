@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from .pool import (
     DefensivePersonnel,
     DefensivePlayRecord,
@@ -10,9 +8,6 @@ from .pool import (
     SpecialTeamsPlayRecord,
 )
 
-
-ROOT_DIR = Path(__file__).resolve().parent.parent.parent
-
 __all__ = [
     "DefensivePersonnel",
     "DefensivePlayRecord",
@@ -21,5 +16,4 @@ __all__ = [
     "PlayPool",
     "PlayRecord",
     "SpecialTeamsPlayRecord",
-    "ROOT_DIR",
 ]

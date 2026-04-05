@@ -120,7 +120,6 @@ def test_play_pool_matches_snapshot(play_pool: PlayPool) -> None:
 def test_play_pool_exposes_expected_category_sets(play_pool: PlayPool) -> None:
     assert set(play_pool.offensive_categories) == EXPECTED_OFFENSIVE_CATEGORIES
     assert set(play_pool.defensive_categories) == EXPECTED_DEFENSIVE_CATEGORIES
-    assert {play.pool_category for play in play_pool.special_teams_plays} == {""}
 
 
 def test_offensive_plays_are_offensive_records(play_pool: PlayPool) -> None:
@@ -220,7 +219,6 @@ def test_special_teams_fixture_shape(play_pool: PlayPool) -> None:
     assert isinstance(play, SpecialTeamsPlayRecord)
 
     assert play.name == "AF-KO"
-    assert play.pool_category == ""
     assert play.special_category == 0x02
 
 
