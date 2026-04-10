@@ -2,11 +2,9 @@ from __future__ import annotations
 
 import logging
 import re
-from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any
 
 from fbpro98_play import InvalidPlayFileError, PlayFile
 
@@ -289,21 +287,18 @@ class PlayPool:
     def to_dict(self, *, relative_to: str | Path | None = None) -> dict[str, object]:
         base_path = Path(relative_to) if relative_to is not None else None
         return {
-            "offensive_plays": self._serialize_plays(
-                self.offensive_plays,
-                relative_to=base_path,
-                sort_key=lambda play: (play.pool_category, play.name),
-            ),
-            "defensive_plays": self._serialize_plays(
-                self.defensive_plays,
-                relative_to=base_path,
-                sort_key=lambda play: (play.pool_category, play.name),
-            ),
-            "special_teams_plays": self._serialize_plays(
-                self.special_teams_plays,
-                relative_to=base_path,
-                sort_key=lambda play: play.name,
-            ),
+            "offensive_plays": [
+                p.to_dict(relative_to=base_path)
+                for p in sorted(self.offensive_plays, key=lambda p: (p.pool_category, p.name))
+            ],
+            "defensive_plays": [
+                p.to_dict(relative_to=base_path)
+                for p in sorted(self.defensive_plays, key=lambda p: (p.pool_category, p.name))
+            ],
+            "special_teams_plays": [
+                p.to_dict(relative_to=base_path)
+                for p in sorted(self.special_teams_plays, key=lambda p: p.name)
+            ],
             "offensive_categories": self._serialize_categories(self.offensive_categories),
             "defensive_categories": self._serialize_categories(self.defensive_categories),
         }
@@ -323,15 +318,3 @@ class PlayPool:
                     }
                 )
         return rows
-
-    @staticmethod
-    def _serialize_plays(
-        plays: Iterable[PlayRecord],
-        *,
-        relative_to: Path | None,
-        sort_key: Callable[[PlayRecord], Any],
-    ) -> list[dict[str, object]]:
-        return [
-            play.to_dict(relative_to=relative_to)
-            for play in sorted(plays, key=sort_key)
-        ]
