@@ -13,8 +13,8 @@ from pnfl_playpool import (
     PlayPool,
     PlayRecord,
     SpecialTeamsPlayRecord,
+    read_play_pool,
 )
-
 
 TESTS_DIR = Path(__file__).resolve().parent
 FIXTURE_ROOT = TESTS_DIR / "data" / "plays"
@@ -95,16 +95,12 @@ REPRESENTATIVE_DEFENSIVE_PLAYS = [
 
 @pytest.fixture(scope="module")
 def play_pool() -> PlayPool:
-    return PlayPool.from_directory(FIXTURE_ROOT)
+    return read_play_pool(FIXTURE_ROOT)
 
 
 def play_by_relative_path(play_pool: PlayPool, relative_path: str) -> PlayRecord:
     relative_posix = Path(relative_path).as_posix()
-    for play in (
-        play_pool.offensive_plays
-        + play_pool.defensive_plays
-        + play_pool.special_teams_plays
-    ):
+    for play in play_pool.offensive_plays + play_pool.defensive_plays + play_pool.special_teams_plays:
         if play.file_path.relative_to(FIXTURE_ROOT).as_posix() == relative_posix:
             return play
     raise AssertionError(f"Play not found for fixture path: {relative_path}")
@@ -160,14 +156,10 @@ def test_defensive_play_personnel_counts(play_pool: PlayPool) -> None:
 
 def test_category_count_totals_match_play_counts(play_pool: PlayPool) -> None:
     offensive_total = sum(
-        count
-        for category_counts in play_pool.offensive_categories.values()
-        for count in category_counts.values()
+        count for category_counts in play_pool.offensive_categories.values() for count in category_counts.values()
     )
     defensive_total = sum(
-        count
-        for category_counts in play_pool.defensive_categories.values()
-        for count in category_counts.values()
+        count for category_counts in play_pool.defensive_categories.values() for count in category_counts.values()
     )
 
     assert offensive_total == len(play_pool.offensive_plays)
@@ -244,12 +236,9 @@ def test_find_by_name(play_pool: PlayPool) -> None:
 
 def test_known_invalid_fixture_is_skipped_with_warning(caplog: pytest.LogCaptureFixture) -> None:
     with caplog.at_level(logging.WARNING, logger="pnfl_playpool.pool"):
-        play_pool = PlayPool.from_directory(FIXTURE_ROOT)
+        play_pool = read_play_pool(FIXTURE_ROOT)
 
     assert INVALID_FIXTURE.is_file()
     assert "Skipping invalid play file:" in caplog.text
     assert "PS7Xmids.ply" in caplog.text
-    assert all(
-        play.file_path.name != INVALID_FIXTURE.name
-        for play in play_pool.offensive_plays
-    )
+    assert all(play.file_path.name != INVALID_FIXTURE.name for play in play_pool.offensive_plays)

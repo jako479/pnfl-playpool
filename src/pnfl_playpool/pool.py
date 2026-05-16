@@ -1,18 +1,40 @@
+"""PNFL play pool: classifies FbPro98 .ply files into offensive/defensive/special records.
+
+Walks a PNFL play-pool root directory, parses each .ply via fbpro98_play, and
+classifies plays by directory layout (Offense/Defense/Special and inner
+category folders) into typed PlayRecord subclasses with metadata like
+pool_category, screen/rollout/QB-draw flags, and personnel grouping.
+"""
+
 from __future__ import annotations
 
 import logging
 import re
 from dataclasses import dataclass
 from enum import Enum
+from os import PathLike
 from pathlib import Path
 
-from fbpro98_play import InvalidPlayFileError, PlayFile
+from fbpro98_play import InvalidPlayFileError, PlayFile, read_play
 
+StrPath = str | PathLike[str]
 
 logger = logging.getLogger(__name__)
 
 RUN_CATEGORIES = {"GLR", "RL", "RM", "RR"}
 PASS_CATEGORIES = {"GLP", "PLR", "PML", "PMM", "PMR", "PRD", "PSL", "PSM", "PSR"}
+DEFENSE_CATEGORIES = {
+    "GLpass",
+    "GLrun",
+    "PassDazzle",
+    "PassLong",
+    "PassMedium",
+    "PassShort",
+    "RunDazzle",
+    "RunLeft",
+    "RunMiddle",
+    "RunRight",
+}
 
 TIMED_SUFFIXES = {"T", "T1", "T2", "TR", "RT", "Ty", "T01", "T01R", "T02", "Top"}
 TIMED_EXCLUSIONS = {"OUT", "SLT1", "FLT1", "OUT1"}
@@ -23,11 +45,15 @@ ROLLOUT_EXCLUSIONS = {"CR", "WR", "scrR", "trpR", "nRT", "NRT"}
 
 
 class PassType(Enum):
+    """How a pass play handles its receivers — timed routes vs. progression reads."""
+
     TIMED = "Timed"
     CHECK_RECEIVERS = "Check Receivers"
 
 
 class DefensivePersonnel(Enum):
+    """Defensive front grouping — 3-4, 4-3, or Run-and-Shoot package."""
+
     THREE_FOUR = "3-4"
     FOUR_THREE = "4-3"
     RUN_AND_SHOOT = "R&S"
@@ -35,6 +61,8 @@ class DefensivePersonnel(Enum):
 
 @dataclass(frozen=True)
 class PlayRecord:
+    """Base record for any play in the pool — name and the parsed .ply file behind it."""
+
     name: str
     play_file: PlayFile
 
@@ -73,6 +101,8 @@ class PlayRecord:
 
 @dataclass(frozen=True)
 class OffensivePlayRecord(PlayRecord):
+    """An offensive play with derived classification: pool_category, screen/rollout/QB-draw flags, pass type."""
+
     pool_category: str
     screen: bool = False
     rollout: bool = False
@@ -99,20 +129,22 @@ class OffensivePlayRecord(PlayRecord):
 
 @dataclass(frozen=True)
 class DefensivePlayRecord(PlayRecord):
+    """A defensive play with pool_category (RunLeft/PassShort/etc.) and optional personnel grouping."""
+
     pool_category: str
     personnel_grouping: DefensivePersonnel | None = None
 
     def to_dict(self, *, relative_to: Path | None = None) -> dict[str, object]:
         result = self._base_dict(relative_to=relative_to)
         result["pool_category"] = self.pool_category
-        result["personnel_grouping"] = (
-            self.personnel_grouping.value if self.personnel_grouping else None
-        )
+        result["personnel_grouping"] = self.personnel_grouping.value if self.personnel_grouping else None
         return result
 
 
 @dataclass(frozen=True)
 class SpecialTeamsPlayRecord(PlayRecord):
+    """A special-teams play — categorized via play_file's special_category, no pool_category."""
+
     def to_dict(self, *, relative_to: Path | None = None) -> dict[str, object]:
         return self._base_dict(relative_to=relative_to)
 
@@ -134,8 +166,10 @@ def _is_rollout(play_name: str) -> bool:
 
 
 class PlayPool:
-    def __init__(self, root_dir: Path) -> None:
-        self.root_dir = root_dir
+    """The PNFL play pool — all plays under a root directory, indexed by name and category."""
+
+    def __init__(self, root_dir: StrPath) -> None:
+        self.root_dir = Path(root_dir)
         self.offensive_categories: dict[str, dict[int, int]] = {}
         self.defensive_categories: dict[str, dict[int, int]] = {}
         self.offensive_plays: list[OffensivePlayRecord] = []
@@ -143,15 +177,8 @@ class PlayPool:
         self.special_teams_plays: list[SpecialTeamsPlayRecord] = []
         self._plays_by_name: dict[str, PlayRecord] = {}
 
-    @classmethod
-    def from_directory(cls, root_dir: str | Path) -> PlayPool:
-        pool = cls(Path(root_dir))
-        logger.info("Processing .ply files in '%s'", pool.root_dir)
-        for file_path in pool.root_dir.glob("**/*.ply"):
-            pool._process_play_file(file_path)
-        return pool
-
     def find_by_name(self, name: str) -> PlayRecord | None:
+        """Look up a play by name, case-insensitive. Returns None if not found."""
         return self._plays_by_name.get(name.upper())
 
     def _register_play(self, play: PlayRecord) -> None:
@@ -159,7 +186,7 @@ class PlayPool:
 
     def _process_play_file(self, file_path: Path) -> None:
         try:
-            play_file = PlayFile.from_file(file_path)
+            play_file = read_play(file_path)
         except InvalidPlayFileError as exc:
             logger.warning("Skipping invalid play file: %s", exc)
             return
@@ -201,10 +228,7 @@ class PlayPool:
         screen = parent_dir == "Screens"
         pool_category = grandparent_dir if screen else parent_dir
         is_pass = pool_category in PASS_CATEGORIES
-        qb_draw = (
-            pool_category in RUN_CATEGORIES
-            and (play_name[1] == "1" or play_name[2] == "1")
-        )
+        qb_draw = pool_category in RUN_CATEGORIES and (play_name[1] == "1" or play_name[2] == "1")
         rollout = is_pass and _is_rollout(play_name)
         pass_type = PassType.TIMED if is_pass and _is_timed(play_name) else None
 
@@ -284,7 +308,13 @@ class PlayPool:
         category_counts = categories.setdefault(pool_category, {})
         category_counts[user_category] = category_counts.get(user_category, 0) + 1
 
-    def to_dict(self, *, relative_to: str | Path | None = None) -> dict[str, object]:
+    def to_dict(self, *, relative_to: StrPath | None = None) -> dict[str, object]:
+        """Serialize the pool to a JSON-friendly dict.
+
+        Plays are sorted (by pool_category then name for offense/defense,
+        by name only for special teams). When `relative_to` is given, file
+        paths are emitted relative to it (POSIX-style); otherwise absolute.
+        """
         base_path = Path(relative_to) if relative_to is not None else None
         return {
             "offensive_plays": [
@@ -296,8 +326,7 @@ class PlayPool:
                 for p in sorted(self.defensive_plays, key=lambda p: (p.pool_category, p.name))
             ],
             "special_teams_plays": [
-                p.to_dict(relative_to=base_path)
-                for p in sorted(self.special_teams_plays, key=lambda p: p.name)
+                p.to_dict(relative_to=base_path) for p in sorted(self.special_teams_plays, key=lambda p: p.name)
             ],
             "offensive_categories": self._serialize_categories(self.offensive_categories),
             "defensive_categories": self._serialize_categories(self.defensive_categories),
@@ -318,3 +347,17 @@ class PlayPool:
                     }
                 )
         return rows
+
+
+def read_play_pool(root_dir: StrPath) -> PlayPool:
+    """Build a PlayPool by recursively scanning `root_dir` for .ply files.
+
+    Files are classified by their path: any "Offense" segment routes to
+    offensive processing, "Defense" to defensive, "Special" to special teams.
+    Invalid .ply files are logged and skipped, not raised.
+    """
+    pool = PlayPool(root_dir)
+    logger.info("Processing .ply files in '%s'", pool.root_dir)
+    for file_path in pool.root_dir.glob("**/*.ply"):
+        pool._process_play_file(file_path)
+    return pool

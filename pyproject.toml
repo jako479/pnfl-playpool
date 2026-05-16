@@ -1,18 +1,24 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=77.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "pnfl-playpool"
-version = "1.0.1"
+version = "0.1.0"
 description = "Build the PNFL play pool from Front Page Sports Football Pro '98 play files."
-authors = [{ name = "Brian J" }]
+authors = [{ name = "Brian Jacobs" }]
 readme = "README.md"
-requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.13"
 dependencies = ["fbpro98-play>=0.1.0"]
 
 [project.optional-dependencies]
 dev = ["pytest", "pyright==1.1.409", "ruff", "ipython"]
+
+[project.urls]
+Homepage = "https://github.com/jako479/pnfl-playpool"
+Repository = "https://github.com/jako479/pnfl-playpool"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -23,20 +29,44 @@ addopts = "-ra --strict-markers --strict-config"
 
 [tool.ruff]
 line-length = 120
-target-version = "py310"
+target-version = "py313"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "B", "UP", "RUF"]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes (unused imports/vars, undefined names)
+    "I",   # isort (import sorting)
+    "B",   # flake8-bugbear (likely bugs)
+    "UP",  # pyupgrade (modernize syntax)
+    "RUF", # ruff-specific
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "E501",   # long assertion messages are common in tests
+    "B905",   # zip(x, x[1:]) without strict= is idiomatic for adjacent-pair iteration in tests
+    "RUF007", # same idiom — itertools.pairwise rewrite is unnecessary churn in tests
+]
 
 [tool.ruff.format]
 quote-style = "double"
 
 [tool.pyright]
 include = ["src", "tests", "scripts"]
-exclude = ["**/*.egg-info", "**/.*", "**/.venv", "**/__pycache__", "**/build", "**/dist", "**/node_modules", "**/output", "**/venv"]
+exclude = [
+    "**/*.egg-info",
+    "**/.*",
+    "**/.venv",
+    "**/__pycache__",
+    "**/build",
+    "**/dist",
+    "**/node_modules",
+    "**/output",
+    "**/venv",
+]
 extraPaths = ["src"]
 typeCheckingMode = "standard"
 reportUnusedImport = "warning"
-pythonVersion = "3.10"
+pythonVersion = "3.13"
 venvPath = ".."
 venv = ".venv"

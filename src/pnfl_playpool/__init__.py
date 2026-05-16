@@ -1,4 +1,6 @@
-from .pool import (
+"""pnfl-playpool — Build the PNFL play pool from Front Page Sports Football Pro '98 play files."""
+
+from pnfl_playpool.pool import (
     DefensivePersonnel,
     DefensivePlayRecord,
     OffensivePlayRecord,
@@ -6,6 +8,7 @@ from .pool import (
     PlayPool,
     PlayRecord,
     SpecialTeamsPlayRecord,
+    read_play_pool,
 )
 
 __all__ = [
@@ -16,4 +19,5 @@ __all__ = [
     "PlayPool",
     "PlayRecord",
     "SpecialTeamsPlayRecord",
+    "read_play_pool",
 ]
