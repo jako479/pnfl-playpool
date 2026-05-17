@@ -1,4 +1,4 @@
-"""pnfl-playpool — Build the PNFL play pool from Front Page Sports Football Pro '98 play files."""
+"""Build the PNFL play pool from Front Page Sports Football Pro '98 play files."""
 
 from pnfl_playpool.pool import (
     DefensivePersonnel,
