@@ -42,8 +42,7 @@ PNFL/
 │   ├── PassMedium/
 │   ├── PassShort/
 │   ├── R&SDefs/
-│   ├── RunDazzle/
-│   └── RunRight/
+│   └── RunDazzle/
 └── Special/
 ```
 
@@ -61,9 +60,9 @@ pip install -e ".[dev]"
 ## Usage
 
 ```python
-from pnfl_playpool import PlayPool, OffensivePlayRecord
+from pnfl_playpool import read_play_pool, OffensivePlayRecord
 
-pool = PlayPool.from_directory(r"E:\SIERRA\FbPro98\PNFL")
+pool = read_play_pool(r"E:\SIERRA\FbPro98\PNFL")
 print(len(pool.offensive_plays))
 print(len(pool.defensive_plays))
 

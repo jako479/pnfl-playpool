@@ -18,10 +18,10 @@ src/pnfl_playpool/
 - Walks the PNFL convention directory layout (`Offense/CATEGORY/...`, `Defense/CATEGORY/...`, `Special/...`) under the pool root
 - Parses every `.ply` via `fbpro98_play.read_play()`
 - Classifies each play into one of three subclasses:
-  - `OffensivePlayRecord` — adds `pool_category`, `pass_type`, `is_screen`, `is_rollout`, `is_qb_draw`
-  - `DefensivePlayRecord` — adds `pool_category`, `defensive_personnel`
+  - `OffensivePlayRecord` — adds `pool_category`, `pass_type`, `screen`, `rollout`, `qb_draw`
+  - `DefensivePlayRecord` — adds `pool_category`, `personnel_grouping`
   - `SpecialTeamsPlayRecord` — wraps the underlying play file with the resolved name
-- Indexes plays by name for O(1) lookup (`pool.get(name)`, `pool[name]`)
+- Indexes plays by name for case-insensitive O(1) lookup (`pool.find_by_name(name)`)
 - Exposes filtered views: `offensive_plays`, `defensive_plays`, `special_teams_plays`
 
 ## What this package assumes
@@ -32,9 +32,9 @@ src/pnfl_playpool/
 
 ## What this package enforces
 
-- Unknown / malformed `.ply` files raise `InvalidPlayFileError` from the underlying library
-- Empty pool roots produce an empty `PlayPool` (callers can detect via `len(pool)`)
-- Duplicate names across the pool: last-loaded wins; a warning is logged
+- Unknown / malformed `.ply` files are caught (`InvalidPlayFileError` from the underlying library), logged as a warning, and skipped — never raised
+- Empty pool roots produce an empty `PlayPool` (callers can detect via the empty `offensive_plays` / `defensive_plays` / `special_teams_plays` lists)
+- Duplicate names across the pool: last-loaded wins
 
 ## What this package does NOT do
 
@@ -60,7 +60,7 @@ Offensive metadata is derived from the filename:
 
 Defensive metadata:
 
-- `defensive_personnel` — derived from intermediate path segments (`3-4`, `4-3`, `R&SDefs`)
+- `personnel_grouping` — derived from path segments (`34` prefix → 3-4, `43` prefix → 4-3, `R&SDefs` parent → R&S)
 
 ## Testing
 
