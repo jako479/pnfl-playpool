@@ -23,6 +23,9 @@ Repository = "https://github.com/jako479/pnfl-playpool"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+pnfl_playpool = ["py.typed"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra --strict-markers --strict-config"

@@ -61,25 +61,39 @@ class DefensivePersonnel(Enum):
 
 @dataclass(frozen=True)
 class PlayRecord:
-    """Base record for any play in the pool — name and the parsed .ply file behind it."""
+    """Base record for any play in the pool.
+
+    Pairs a display name with the parsed .ply file behind it, and exposes
+    convenience passthrough properties for the most-used PlayFile fields.
+    Subclasses add classification-specific fields (pool_category, personnel
+    grouping, pass-type flags, etc.).
+    """
 
     name: str
+    """Display name of the play (the .ply file's stem, e.g. `MYPLAY`)."""
+
     play_file: PlayFile
+    """Parsed .ply file backing this record. The source of truth for
+    file_path, play_category, special_category, and user_category."""
 
     @property
     def file_path(self) -> Path:
+        """Convenience passthrough to `play_file.file_path`."""
         return self.play_file.file_path
 
     @property
     def play_category(self) -> int:
+        """Convenience passthrough to `play_file.play_category`."""
         return self.play_file.play_category
 
     @property
     def special_category(self) -> int:
+        """Convenience passthrough to `play_file.special_category`."""
         return self.play_file.special_category
 
     @property
     def user_category(self) -> int:
+        """Convenience passthrough to `play_file.user_category`."""
         return self.play_file.user_category
 
     def _base_dict(self, *, relative_to: Path | None = None) -> dict[str, object]:
@@ -96,28 +110,62 @@ class PlayRecord:
         }
 
     def to_dict(self, *, relative_to: Path | None = None) -> dict[str, object]:
+        """Serialize this record to a JSON-friendly dict.
+
+        Args:
+            relative_to: If given, `file_path` is emitted relative to this base
+                directory (POSIX-style). If None, `file_path` is absolute.
+
+        Returns:
+            Dict with keys: `name`, `file_path`, `play_category`,
+            `special_category`, `user_category`. Subclasses may add fields.
+        """
         return self._base_dict(relative_to=relative_to)
 
 
 @dataclass(frozen=True)
 class OffensivePlayRecord(PlayRecord):
-    """An offensive play with derived classification: pool_category, screen/rollout/QB-draw flags, pass type."""
+    """An offensive play with derived classification from its pool directory.
+
+    `pool_category` comes from the directory structure (e.g. RR, PSL, GLP),
+    not the .ply file's bytes. Screen / rollout / QB-draw flags and `pass_type`
+    are derived from play-name suffix conventions.
+    """
 
     pool_category: str
+    """Pool directory short code (e.g. RR, PSL, GLP, PSR). Member of
+    RUN_CATEGORIES or PASS_CATEGORIES."""
+
     screen: bool = False
+    """True if this play lives under a Screens subdirectory."""
+
     rollout: bool = False
+    """True if this pass play's name matches the rollout suffix convention."""
+
     qb_draw: bool = False
+    """True if this run play is a QB draw (detected by name digits)."""
+
     pass_type: PassType | None = None
+    """For pass plays only: TIMED if the name matches the timed-route
+    convention, else None (treated as CHECK_RECEIVERS by consumers)."""
 
     @property
     def is_run(self) -> bool:
+        """True if `pool_category` is a run category (member of RUN_CATEGORIES)."""
         return self.pool_category in RUN_CATEGORIES
 
     @property
     def is_pass(self) -> bool:
+        """True if `pool_category` is a pass category (member of PASS_CATEGORIES)."""
         return self.pool_category in PASS_CATEGORIES
 
     def to_dict(self, *, relative_to: Path | None = None) -> dict[str, object]:
+        """Serialize to a JSON-friendly dict.
+
+        Returns:
+            The base PlayRecord keys plus `pool_category`, `screen`, `rollout`,
+            `qb_draw`, and `pass_type` (the PassType's string value, or None).
+        """
         result = self._base_dict(relative_to=relative_to)
         result["pool_category"] = self.pool_category
         result["screen"] = self.screen
@@ -129,12 +177,28 @@ class OffensivePlayRecord(PlayRecord):
 
 @dataclass(frozen=True)
 class DefensivePlayRecord(PlayRecord):
-    """A defensive play with pool_category (RunLeft/PassShort/etc.) and optional personnel grouping."""
+    """A defensive play with derived classification from its pool directory.
+
+    `pool_category` and `personnel_grouping` come from the directory structure,
+    not the .ply file's bytes. Personnel is inferred from parent directory
+    prefix (34/43) or grandparent directory name (R&SDefs).
+    """
 
     pool_category: str
+    """Pool directory category (e.g. RunLeft, PassShort, GLrun). Member of
+    DEFENSE_CATEGORIES."""
+
     personnel_grouping: DefensivePersonnel | None = None
+    """Defensive front grouping derived from directory layout, or None when
+    the directory layout doesn't specify one."""
 
     def to_dict(self, *, relative_to: Path | None = None) -> dict[str, object]:
+        """Serialize to a JSON-friendly dict.
+
+        Returns:
+            The base PlayRecord keys plus `pool_category` and
+            `personnel_grouping` (the DefensivePersonnel's string value, or None).
+        """
         result = self._base_dict(relative_to=relative_to)
         result["pool_category"] = self.pool_category
         result["personnel_grouping"] = self.personnel_grouping.value if self.personnel_grouping else None
@@ -143,9 +207,14 @@ class DefensivePlayRecord(PlayRecord):
 
 @dataclass(frozen=True)
 class SpecialTeamsPlayRecord(PlayRecord):
-    """A special-teams play — categorized via play_file's special_category, no pool_category."""
+    """A special-teams play.
+
+    Categorization comes from the .ply file's `special_category` byte, not
+    from a pool directory; this record adds no extra fields beyond the base.
+    """
 
     def to_dict(self, *, relative_to: Path | None = None) -> dict[str, object]:
+        """Serialize to a JSON-friendly dict. Same keys as the base PlayRecord."""
         return self._base_dict(relative_to=relative_to)
 
 
@@ -166,9 +235,29 @@ def _is_rollout(play_name: str) -> bool:
 
 
 class PlayPool:
-    """The PNFL play pool — all plays under a root directory, indexed by name and category."""
+    """The PNFL play pool — all plays under a root directory, indexed by name and category.
+
+    Construct an empty pool with `PlayPool(root_dir)`, or use the top-level
+    `read_play_pool(root_dir)` function to build and populate one in one call.
+
+    Attributes:
+        root_dir: The root directory the pool was built from.
+        offensive_plays: All classified offensive plays, in discovery order.
+        defensive_plays: All classified defensive plays, in discovery order.
+        special_teams_plays: All classified special-teams plays, in discovery order.
+        offensive_categories: Per-pool-category counts of `user_category` byte
+            values, shaped as `{pool_category: {user_category: count}}`.
+        defensive_categories: Same shape as `offensive_categories`, for defense.
+    """
 
     def __init__(self, root_dir: StrPath) -> None:
+        """Create an empty PlayPool rooted at `root_dir`.
+
+        Args:
+            root_dir: The directory the pool will be (or has been) built from.
+                Stored as `self.root_dir` (a Path); not scanned by this
+                constructor. Use `read_play_pool` to populate.
+        """
         self.root_dir = Path(root_dir)
         self.offensive_categories: dict[str, dict[int, int]] = {}
         self.defensive_categories: dict[str, dict[int, int]] = {}
@@ -178,7 +267,16 @@ class PlayPool:
         self._plays_by_name: dict[str, PlayRecord] = {}
 
     def find_by_name(self, name: str) -> PlayRecord | None:
-        """Look up a play by name, case-insensitive. Returns None if not found."""
+        """Look up a play by name, case-insensitive.
+
+        Args:
+            name: Play name (matched against each record's `name` field,
+                compared in uppercase).
+
+        Returns:
+            The matching PlayRecord, or None if no play with that name was
+            found in this pool.
+        """
         return self._plays_by_name.get(name.upper())
 
     def _register_play(self, play: PlayRecord) -> None:
@@ -314,6 +412,16 @@ class PlayPool:
         Plays are sorted (by pool_category then name for offense/defense,
         by name only for special teams). When `relative_to` is given, file
         paths are emitted relative to it (POSIX-style); otherwise absolute.
+
+        Args:
+            relative_to: If given, every play's `file_path` is emitted relative
+                to this base directory. If None, paths are absolute.
+
+        Returns:
+            Dict with keys `offensive_plays`, `defensive_plays`,
+            `special_teams_plays` (lists of per-play dicts), plus
+            `offensive_categories` and `defensive_categories` (lists of
+            `{pool_category, user_category, count}` rows).
         """
         base_path = Path(relative_to) if relative_to is not None else None
         return {
@@ -354,7 +462,16 @@ def read_play_pool(root_dir: StrPath) -> PlayPool:
 
     Files are classified by their path: any "Offense" segment routes to
     offensive processing, "Defense" to defensive, "Special" to special teams.
-    Invalid .ply files are logged and skipped, not raised.
+    Invalid .ply files (`InvalidPlayFileError` from fbpro98_play) are logged
+    at WARNING and skipped, not raised.
+
+    Args:
+        root_dir: Root directory of the PNFL play pool to scan.
+
+    Returns:
+        A populated PlayPool containing every valid .ply file found under
+        `root_dir`, classified into offensive_plays, defensive_plays, or
+        special_teams_plays.
     """
     pool = PlayPool(root_dir)
     logger.info("Processing .ply files in '%s'", pool.root_dir)
