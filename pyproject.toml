@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "pnfl-playpool"
 version = "0.1.0"
-description = "Build the PNFL play pool from Front Page Sports Football Pro '98 play files."
+description = "Library for building the PNFL play pool from Front Page Sports Football Pro '98 plays."
 authors = [{ name = "Brian Jacobs" }]
 readme = "README.md"
 license = "MIT"
