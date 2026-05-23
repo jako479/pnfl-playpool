@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from enum import Enum
 from os import PathLike
 from pathlib import Path
+from typing import Generic, TypeVar, cast
 
 from fbpro98_play import InvalidPlayFileError, PlayFile, read_play
 
@@ -42,6 +43,12 @@ TIMED_LOB_PATTERN = re.compile(r"lob.$", re.I)
 
 ROLLOUT_SUFFIXES = {"R", "RT", "TR", "wagL", "rolL"}
 ROLLOUT_EXCLUSIONS = {"CR", "WR", "scrR", "trpR", "nRT", "NRT"}
+
+
+T_off = TypeVar("T_off", bound="OffensivePlayRecord", default="OffensivePlayRecord")
+"""Type variable for the offensive record type a `PlayPool` holds. Defaults to
+`OffensivePlayRecord` so existing consumers see no API change; subclasses (e.g.
+`PlayPoolEx` in `pnfl-playpoolex`) parameterize with their own subclass."""
 
 
 class PassType(Enum):
@@ -234,11 +241,16 @@ def _is_rollout(play_name: str) -> bool:
     return any(play_name.endswith(sfx) for sfx in ROLLOUT_SUFFIXES)
 
 
-class PlayPool:
+class PlayPool(Generic[T_off]):
     """The PNFL play pool — all plays under a root directory, indexed by name and category.
 
     Construct an empty pool with `PlayPool(root_dir)`, or use the top-level
     `read_play_pool(root_dir)` function to build and populate one in one call.
+
+    Generic over `T_off`, the offensive record type. Defaults to
+    `OffensivePlayRecord`; subclasses (e.g. `PlayPoolEx`) parameterize with their
+    own `OffensivePlayRecord` subclass and override `_create_offensive_record`
+    to produce instances of that type.
 
     Attributes:
         root_dir: The root directory the pool was built from.
@@ -261,7 +273,7 @@ class PlayPool:
         self.root_dir = Path(root_dir)
         self.offensive_categories: dict[str, dict[int, int]] = {}
         self.defensive_categories: dict[str, dict[int, int]] = {}
-        self.offensive_plays: list[OffensivePlayRecord] = []
+        self.offensive_plays: list[T_off] = []
         self.defensive_plays: list[DefensivePlayRecord] = []
         self.special_teams_plays: list[SpecialTeamsPlayRecord] = []
         self._plays_by_name: dict[str, PlayRecord] = {}
@@ -330,7 +342,7 @@ class PlayPool:
         rollout = is_pass and _is_rollout(play_name)
         pass_type = PassType.TIMED if is_pass and _is_timed(play_name) else None
 
-        play = OffensivePlayRecord(
+        play = self._create_offensive_record(
             name=play_name,
             play_file=play_file,
             pool_category=pool_category,
@@ -345,6 +357,36 @@ class PlayPool:
             self.offensive_categories,
             pool_category,
             play_file.user_category,
+        )
+
+    def _create_offensive_record(
+        self,
+        *,
+        name: str,
+        play_file: PlayFile,
+        pool_category: str,
+        screen: bool,
+        rollout: bool,
+        qb_draw: bool,
+        pass_type: PassType | None,
+    ) -> T_off:
+        """Build the offensive record for a play (extension hook).
+
+        The base implementation returns an `OffensivePlayRecord`. Subclasses can
+        override this to return their own subclass (typed as `T_off`) with
+        additional fields derived from the same inputs.
+        """
+        return cast(
+            "T_off",
+            OffensivePlayRecord(
+                name=name,
+                play_file=play_file,
+                pool_category=pool_category,
+                screen=screen,
+                rollout=rollout,
+                qb_draw=qb_draw,
+                pass_type=pass_type,
+            ),
         )
 
     def _process_defensive_play(
@@ -457,7 +499,7 @@ class PlayPool:
         return rows
 
 
-def read_play_pool(root_dir: StrPath) -> PlayPool:
+def read_play_pool(root_dir: StrPath) -> PlayPool[OffensivePlayRecord]:
     """Build a PlayPool by recursively scanning `root_dir` for .ply files.
 
     Files are classified by their path: any "Offense" segment routes to
